@@ -6,83 +6,124 @@
 //
 
 import SwiftUI
-import CoreData
 
-struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+struct CalculatorView: View {
+    // Variáveis para armazenar os valores e operações
+    @State private var input = "0"
+    @State private var currentNumber = 0.0
+    @State private var previousNumber = 0.0
+    @State private var selectedOperation: Operation?
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
+    enum Operation {
+        case add, subtract, multiply, divide
+    }
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        VStack(spacing: 10) {
+            Text(input)
+                .font(.largeTitle)
+                .padding()
+
+            HStack(spacing: 10) {
+                CalculatorButton(title: "1") { self.numberPressed(1) }
+                CalculatorButton(title: "2") { self.numberPressed(2) }
+                CalculatorButton(title: "3") { self.numberPressed(3) }
+                CalculatorButton(title: "+", color: .orange) { self.operationPressed(.add) }
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+
+            HStack(spacing: 10) {
+                CalculatorButton(title: "4") { self.numberPressed(4) }
+                CalculatorButton(title: "5") { self.numberPressed(5) }
+                CalculatorButton(title: "6") { self.numberPressed(6) }
+                CalculatorButton(title: "-", color: .orange) { self.operationPressed(.subtract) }
             }
-            Text("Select an item")
+
+            HStack(spacing: 10) {
+                CalculatorButton(title: "7") { self.numberPressed(7) }
+                CalculatorButton(title: "8") { self.numberPressed(8) }
+                CalculatorButton(title: "9") { self.numberPressed(9) }
+                CalculatorButton(title: "×", color: .orange) { self.operationPressed(.multiply) }
+            }
+
+            HStack(spacing: 10) {
+                CalculatorButton(title: "C", color: .red) { self.clear() }
+                CalculatorButton(title: "0") { self.numberPressed(0) }
+                CalculatorButton(title: "=") { self.calculate() }
+                CalculatorButton(title: "÷", color: .orange) { self.operationPressed(.divide) }
+            }
+        }
+        .padding()
+    }
+
+    func numberPressed(_ number: Int) {
+        if input == "0" {
+            input = "\(number)"
+        } else {
+            input += "\(number)"
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+    func operationPressed(_ operation: Operation) {
+        if let currentInput = Double(input) {
+            currentNumber = currentInput
+            input = "0"
+            selectedOperation = operation
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
+    func clear() {
+        input = "0"
+        currentNumber = 0
+        previousNumber = 0
+        selectedOperation = nil
+    }
 
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+    func calculate() {
+        if let currentInput = Double(input) {
+            switch selectedOperation {
+            case .add:
+                currentNumber += currentInput
+            case .subtract:
+                currentNumber -= currentInput
+            case .multiply:
+                currentNumber *= currentInput
+            case .divide:
+                if currentInput != 0 {
+                    currentNumber /= currentInput
+                } else {
+                    // Tratar a divisão por zero, se necessário
+                    // Pode exibir uma mensagem de erro ou lidar de outra forma
+                }
+            case nil:
+                // Nenhuma operação selecionada
+                break
             }
+
+            input = "\(currentNumber)"
+            selectedOperation = nil
         }
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
+struct CalculatorButton: View {
+    var title: String
+    var color: Color = .gray
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.title)
+                .foregroundColor(.white)
+                .frame(width: 80, height: 80)
+                .background(color)
+                .cornerRadius(40)
+        }
+    }
+}
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        CalculatorView()
     }
 }
